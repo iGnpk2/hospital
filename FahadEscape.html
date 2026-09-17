@@ -1,0 +1,864 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>كابوس المستشفى المهجور - قصة فهد</title>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #050505;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            user-select: none;
+        }
+        #ui-layer {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            color: #fff;
+            font-size: 16px;
+            text-shadow: 2px 2px 4px #000;
+            z-index: 10;
+            background: rgba(0, 0, 0, 0.75);
+            padding: 12px 18px;
+            border-radius: 8px;
+            border-right: 4px solid #8b0000;
+            line-height: 1.6;
+        }
+        #interaction-prompt {
+            position: absolute;
+            top: 60%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #ffeb3b;
+            font-size: 20px;
+            font-weight: bold;
+            background: rgba(0, 0, 0, 0.9);
+            padding: 12px 26px;
+            border-radius: 8px;
+            border: 2px solid #ffd700;
+            display: none;
+            z-index: 15;
+            text-shadow: 1px 1px 3px #000;
+            pointer-events: none;
+        }
+        #crosshair {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 8px;
+            height: 8px;
+            background-color: rgba(255, 255, 255, 0.7);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 12;
+            transition: all 0.15s ease;
+        }
+        #crosshair.active {
+            background-color: #00ff66;
+            width: 14px;
+            height: 14px;
+            box-shadow: 0 0 10px #00ff66;
+        }
+        #jumpscare-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background-color: #8b0000;
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+            overflow: hidden;
+        }
+        .scare-face {
+            width: 420px;
+            height: 520px;
+            background: #111;
+            border-radius: 50% 50% 40% 40%;
+            position: relative;
+            border: 6px solid #330000;
+            box-shadow: 0 0 60px #ff0000;
+        }
+        .scare-eye {
+            position: absolute;
+            top: 130px;
+            width: 70px;
+            height: 70px;
+            background: #fff;
+            border-radius: 50%;
+            box-shadow: 0 0 25px #fff;
+        }
+        .scare-eye.left { left: 80px; }
+        .scare-eye.right { right: 80px; }
+        .scare-pupil {
+            width: 18px;
+            height: 18px;
+            background: #b00;
+            border-radius: 50%;
+            margin: 26px auto;
+        }
+        .scare-mouth {
+            position: absolute;
+            bottom: 70px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 150px;
+            height: 190px;
+            background: #000;
+            border-radius: 40% 40% 50% 50%;
+            border: 4px solid #500;
+        }
+        #center-screen {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            text-align: center;
+            font-size: 20px;
+            background: rgba(10, 10, 10, 0.95);
+            padding: 30px 45px;
+            border: 2px solid #8b0000;
+            border-radius: 10px;
+            cursor: pointer;
+            z-index: 50;
+            box-shadow: 0 0 35px rgba(0, 0, 0, 0.9);
+            max-width: 500px;
+        }
+        #modal-note {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: #e4d7b5;
+            color: #2b1d0c;
+            padding: 30px;
+            border-radius: 6px;
+            box-shadow: 0 0 40px rgba(0,0,0,0.9);
+            z-index: 60;
+            display: none;
+            width: 380px;
+            font-size: 18px;
+            line-height: 1.8;
+            border: 2px solid #5c3a21;
+        }
+        #keypad-modal {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: #1c1c1c;
+            color: #fff;
+            padding: 25px;
+            border-radius: 8px;
+            border: 2px solid #555;
+            z-index: 60;
+            display: none;
+            text-align: center;
+            width: 280px;
+        }
+        .keypad-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-top: 15px;
+        }
+        .key-btn {
+            background: #333;
+            color: #fff;
+            border: 1px solid #666;
+            padding: 12px;
+            font-size: 20px;
+            cursor: pointer;
+            border-radius: 5px;
+        }
+        .key-btn:hover { background: #555; }
+        .instructions-bar {
+            position: absolute;
+            bottom: 15px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: #eee;
+            font-size: 14px;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 8px 18px;
+            border-radius: 20px;
+            pointer-events: none;
+            z-index: 10;
+        }
+    </style>
+</head>
+<body>
+
+<div id="crosshair"></div>
+<div id="interaction-prompt"></div>
+
+<div id="ui-layer">
+    <div>الباحث: <b>فهد</b></div>
+    <div>الكشاف [F]: <span id="torch-state" style="color: #00ff66;">شغال</span></div>
+    <div>الموقع: <span id="room-state" style="color: #ffaa00;">بهو الاستقبال</span></div>
+    <div>المفاتيح: <span id="inv-keys" style="color: #ff4d4d;">لا يوجد</span></div>
+</div>
+
+<div class="instructions-bar">
+    [W] قدام &nbsp;|&nbsp; [S] وراء &nbsp;|&nbsp; [A] يسار &nbsp;|&nbsp; [D] يمين &nbsp;|&nbsp; [E] فحص وتفاعل &nbsp;|&nbsp; [F] كشاف
+</div>
+
+<div id="center-screen">
+    <h2 style="color: #ff3333; margin-top:0;">مستشفى الشفاء المهجور</h2>
+    <p>تم تحسين الإضاءة لتتمكن من الرؤية واستكشاف الغرف بوضوح.</p>
+    <p>تحرك باستخدام <b>W, A, S, D</b> وتلفت بالماوس.</p>
+    <p>اقترب من أي باب أو طاولة أو ورقة واضغط <b>[E]</b> للفحص.</p>
+    <button style="padding: 12px 28px; background: #8b0000; color: #fff; border: none; font-size: 18px; cursor: pointer; border-radius: 5px; margin-top: 15px;">ادخل المستشفى</button>
+</div>
+
+<!-- ورقة الملاحظة -->
+<div id="modal-note">
+    <h3 style="margin-top:0; border-bottom: 1px solid #888; padding-bottom:5px;">سجل طوارئ المستشفى #1987</h3>
+    <p>تم إغلاق مستودع الأدوية بعد الحادثة. الرمز المشفر لقفل الباب هو:</p>
+    <h2 style="text-align: center; color: #8b0000; letter-spacing: 5px;">4829</h2>
+    <p style="font-size: 14px; text-align: center;">اضغط <b>[E]</b> لإغلاق الورقة ومتابعة البحث</p>
+</div>
+
+<!-- لوحة الأرقام للباب الإلكتروني -->
+<div id="keypad-modal">
+    <h4 style="margin: 0 0 10px 0;">أدخل رمز مستودع الأدوية</h4>
+    <div id="keypad-display" style="background: #000; color: #00ff00; font-size: 24px; padding: 8px; letter-spacing: 4px; min-height: 35px; border-radius: 4px;"></div>
+    <div class="keypad-grid">
+        <button class="key-btn" onclick="pressKey('1')">1</button>
+        <button class="key-btn" onclick="pressKey('2')">2</button>
+        <button class="key-btn" onclick="pressKey('3')">3</button>
+        <button class="key-btn" onclick="pressKey('4')">4</button>
+        <button class="key-btn" onclick="pressKey('5')">5</button>
+        <button class="key-btn" onclick="pressKey('6')">6</button>
+        <button class="key-btn" onclick="pressKey('7')">7</button>
+        <button class="key-btn" onclick="pressKey('8')">8</button>
+        <button class="key-btn" onclick="pressKey('9')">9</button>
+        <button class="key-btn" style="color:red;" onclick="pressKey('C')">C</button>
+        <button class="key-btn" onclick="pressKey('0')">0</button>
+        <button class="key-btn" style="color:#00ff00;" onclick="pressKey('OK')">✓</button>
+    </div>
+    <p style="font-size: 13px; color: #aaa; margin: 10px 0 0 0;">اضغط [E] للإلغاء</p>
+</div>
+
+<!-- واجهة الخرشة المفاجئة -->
+<div id="jumpscare-overlay">
+    <div class="scare-face">
+        <div class="scare-eye left"><div class="scare-pupil"></div></div>
+        <div class="scare-eye right"><div class="scare-pupil"></div></div>
+        <div class="scare-mouth"></div>
+    </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+<script>
+    // --- محرك الصوت الداخلي (Web Audio API) ---
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    let actx = null;
+
+    function initAudio() {
+        if (!actx) actx = new AudioCtx();
+        if (actx.state === 'suspended') actx.resume();
+    }
+
+    function playCreak() {
+        if (!actx) return;
+        const osc = actx.createOscillator();
+        const gain = actx.createGain();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(80, actx.currentTime);
+        osc.frequency.linearRampToValueAtTime(130, actx.currentTime + 0.35);
+        gain.gain.setValueAtTime(0.3, actx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, actx.currentTime + 0.4);
+        osc.connect(gain);
+        gain.connect(actx.destination);
+        osc.start();
+        osc.stop(actx.currentTime + 0.4);
+    }
+
+    function playPickupSound() {
+        if (!actx) return;
+        const osc = actx.createOscillator();
+        const gain = actx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(440, actx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(880, actx.currentTime + 0.2);
+        gain.gain.setValueAtTime(0.25, actx.currentTime);
+        gain.gain.linearRampToValueAtTime(0.01, actx.currentTime + 0.2);
+        osc.connect(gain);
+        gain.connect(actx.destination);
+        osc.start();
+        osc.stop(actx.currentTime + 0.2);
+    }
+
+    function playScreamerSound() {
+        if (!actx) return;
+        for (let i = 0; i < 3; i++) {
+            const osc = actx.createOscillator();
+            const gain = actx.createGain();
+            osc.type = i % 2 === 0 ? 'sawtooth' : 'triangle';
+            osc.frequency.setValueAtTime(400 + Math.random() * 500, actx.currentTime);
+            osc.frequency.linearRampToValueAtTime(1300 + Math.random() * 700, actx.currentTime + 0.8);
+            gain.gain.setValueAtTime(0.85, actx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, actx.currentTime + 1.2);
+            osc.connect(gain);
+            gain.connect(actx.destination);
+            osc.start();
+            osc.stop(actx.currentTime + 1.2);
+        }
+    }
+
+    // --- نظام اللعبة ومحرك الإضاءة ---
+    let scene, camera, renderer, flashlight, ambientLight;
+    let isLocked = false;
+    let isGameOver = false;
+    let euler = new THREE.Euler(0, 0, 0, 'YXZ');
+    const moveState = { forward: false, backward: false, left: false, right: false };
+
+    let inventory = {
+        recordsKey: false,
+        morgueKey: false,
+        powerRestored: false
+    };
+
+    let enteredCode = "";
+    let activeInteractable = null;
+    let isReadingNote = false;
+    let isUsingKeypad = false;
+    let flashlightOn = true;
+
+    const interactables = [];
+
+    const startBtn = document.getElementById('center-screen');
+    const promptEl = document.getElementById('interaction-prompt');
+    const crosshairEl = document.getElementById('crosshair');
+    const noteModal = document.getElementById('modal-note');
+    const keypadModal = document.getElementById('keypad-modal');
+    const scareOverlay = document.getElementById('jumpscare-overlay');
+
+    startBtn.addEventListener('click', () => {
+        initAudio();
+        document.body.requestPointerLock();
+    });
+
+    document.addEventListener('pointerlockchange', () => {
+        if (document.pointerLockElement === document.body) {
+            isLocked = true;
+            startBtn.style.display = 'none';
+        } else {
+            isLocked = false;
+            if (!isGameOver && !isReadingNote && !isUsingKeypad) {
+                startBtn.style.display = 'block';
+                startBtn.innerHTML = `<h2>اللعبة متوقفة مؤقتاً</h2><p>اضغط لمتابعة التحقيق يا فهد</p>`;
+            }
+        }
+    });
+
+    document.addEventListener('mousemove', (e) => {
+        if (!isLocked || isGameOver || isReadingNote || isUsingKeypad) return;
+        euler.y -= (e.movementX || 0) * 0.0026;
+        euler.x -= (e.movementY || 0) * 0.0026;
+        euler.x = Math.max(-Math.PI / 2.3, Math.min(Math.PI / 2.3, euler.x));
+        camera.quaternion.setFromEuler(euler);
+    });
+
+    window.addEventListener('keydown', (e) => {
+        const code = e.code;
+        if (code === 'KeyW') moveState.forward = true;
+        if (code === 'KeyS') moveState.backward = true;
+        if (code === 'KeyA') moveState.left = true;
+        if (code === 'KeyD') moveState.right = true;
+
+        if (code === 'KeyE') handleInteraction();
+
+        if (code === 'KeyF') {
+            flashlightOn = !flashlightOn;
+            flashlight.intensity = flashlightOn ? 3.5 : 0;
+            document.getElementById('torch-state').innerText = flashlightOn ? "شغال" : "مطفأ";
+            document.getElementById('torch-state').style.color = flashlightOn ? "#00ff66" : "#ff4444";
+        }
+    });
+
+    window.addEventListener('keyup', (e) => {
+        const code = e.code;
+        if (code === 'KeyW') moveState.forward = false;
+        if (code === 'KeyS') moveState.backward = false;
+        if (code === 'KeyA') moveState.left = false;
+        if (code === 'KeyD') moveState.right = false;
+    });
+
+    function init() {
+        scene = new THREE.Scene();
+        // تقليل الضباب لتتضح الرؤية بشكل ممتاز
+        scene.fog = new THREE.FogExp2(0x1a1a1a, 0.035);
+
+        camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 100);
+        camera.position.set(0, 1.6, 12); // فهد يبدأ في بهو الاستقبال
+
+        renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setClearColor(0x111111);
+        document.body.appendChild(renderer.domElement);
+
+        // إضاءة محيطية كافية لرؤية تفاصيل الغرف بوضوح
+        ambientLight = new THREE.AmbientLight(0x444444);
+        scene.add(ambientLight);
+
+        // كشاف فهد: واسع وساطع يضيء الطريق أمامه بوضوح
+        flashlight = new THREE.SpotLight(0xfff5e6, 3.5, 30, Math.PI / 3.5, 0.4, 1.0);
+        flashlight.position.copy(camera.position);
+        flashlight.target = camera;
+        scene.add(flashlight);
+
+        // مصابيح طوارئ جدارية تنير معالم المبنى
+        addWallLamp(0, 3.2, 8, 0xaaccff, 1.2);    // إنارة بهو الاستقبال
+        addWallLamp(-10, 3.2, 0, 0x88ff88, 1.0);  // إنارة ممر السجلات (أخضر خافت)
+        addWallLamp(10, 3.2, 0, 0xffaa44, 1.0);   // إنارة ممر مستودع الأدوية
+        addWallLamp(-15, 3.2, -10, 0xff5555, 1.2); // إنارة المشرحة (أحمر طوارئ)
+        addWallLamp(9, 3.2, -10, 0x55ff55, 1.5);   // إنارة باب الطوارئ للهروب
+
+        buildHospitalRooms();
+        setupInteractiveObjects();
+        scheduleNextJumpscare();
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        animate();
+    }
+
+    function addWallLamp(x, y, z, color, intensity) {
+        const lampLight = new THREE.PointLight(color, intensity, 16);
+        lampLight.position.set(x, y, z);
+        scene.add(lampLight);
+
+        // شكل المصباح المعلق على السقف
+        const bulb = new THREE.Mesh(
+            new THREE.BoxGeometry(0.8, 0.15, 0.3),
+            new THREE.MeshBasicMaterial({ color: color })
+        );
+        bulb.position.set(x, y, z);
+        scene.add(bulb);
+    }
+
+    function buildHospitalRooms() {
+        // خامات أكثر وضوحاً
+        const wallMat = new THREE.MeshLambertMaterial({ color: 0x5c635d });
+        const floorMat = new THREE.MeshLambertMaterial({ color: 0x2b302c });
+        const ceilingMat = new THREE.MeshLambertMaterial({ color: 0x3d423e });
+
+        // أرضية وسقف
+        const floor = new THREE.Mesh(new THREE.PlaneGeometry(50, 50), floorMat);
+        floor.rotation.x = -Math.PI / 2;
+        scene.add(floor);
+
+        const ceiling = new THREE.Mesh(new THREE.PlaneGeometry(50, 50), ceilingMat);
+        ceiling.rotation.x = Math.PI / 2;
+        ceiling.position.y = 3.6;
+        scene.add(ceiling);
+
+        // الجدران الخارجية للمستشفى
+        createBoxWall(0, 1.8, -18, 42, 3.6, 0.6, wallMat);
+        createBoxWall(0, 1.8, 18, 42, 3.6, 0.6, wallMat);
+        createBoxWall(-21, 1.8, 0, 0.6, 3.6, 36, wallMat);
+        createBoxWall(21, 1.8, 0, 0.6, 3.6, 36, wallMat);
+
+        // تقسيم الغرف
+        createBoxWall(-12, 1.8, 4, 18, 3.6, 0.5, wallMat);
+        createBoxWall(12, 1.8, 4, 18, 3.6, 0.5, wallMat);
+        createBoxWall(-10, 1.8, -6, 22, 3.6, 0.5, wallMat);
+        createBoxWall(-9, 1.8, -1, 0.5, 3.6, 10, wallMat);
+        createBoxWall(10, 1.8, -6, 22, 3.6, 0.5, wallMat);
+        createBoxWall(9, 1.8, -1, 0.5, 3.6, 10, wallMat);
+    }
+
+    function createBoxWall(x, y, z, w, h, d, mat) {
+        const wall = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
+        wall.position.set(x, y, z);
+        scene.add(wall);
+    }
+
+    function setupInteractiveObjects() {
+        const doorGeo = new THREE.BoxGeometry(2.2, 3.2, 0.15);
+
+        // 1. باب غرفة السجلات
+        const recordsDoorMat = new THREE.MeshLambertMaterial({ color: 0x8b5a2b });
+        const recordsDoor = new THREE.Mesh(doorGeo, recordsDoorMat);
+        recordsDoor.position.set(-2.5, 1.6, 4);
+        scene.add(recordsDoor);
+
+        interactables.push({
+            mesh: recordsDoor,
+            name: "door_records",
+            label: "باب غرفة السجلات [مغلق بمفتاح نحاسي]",
+            isOpen: false,
+            action: (obj) => {
+                if (inventory.recordsKey) {
+                    toggleDoor(obj, "تم فتح باب غرفة السجلات!");
+                } else {
+                    showMessage("الباب موصد! المفتاح الذهبي على طاولة الاستقبال خلفك.");
+                }
+            }
+        });
+
+        // طاولة الاستقبال ومفتاح السجلات المشع
+        const table = new THREE.Mesh(new THREE.BoxGeometry(3, 1, 1.5), new THREE.MeshLambertMaterial({ color: 0x4a4a4a }));
+        table.position.set(0, 0.5, 9);
+        scene.add(table);
+
+        const keyGeo = new THREE.BoxGeometry(0.4, 0.15, 0.5);
+        const recordsKeyMesh = new THREE.Mesh(keyGeo, new THREE.MeshBasicMaterial({ color: 0xffd700 }));
+        recordsKeyMesh.position.set(0.6, 1.1, 9);
+        scene.add(recordsKeyMesh);
+
+        interactables.push({
+            mesh: recordsKeyMesh,
+            name: "key_records",
+            label: "التقاط مفتاح السجلات النحاسي [E]",
+            action: (obj) => {
+                inventory.recordsKey = true;
+                scene.remove(obj.mesh);
+                removeInteractable(obj);
+                playPickupSound();
+                updateUI("بحوزتك: مفتاح السجلات");
+                showMessage("أخذت مفتاح السجلات النحاسي!");
+            }
+        });
+
+        // ورقة الملاحظة داخل غرفة السجلات
+        const noteMesh = new THREE.Mesh(new THREE.PlaneGeometry(0.8, 1.0), new THREE.MeshBasicMaterial({ color: 0xfff0b3 }));
+        noteMesh.position.set(-14, 1.6, -4);
+        noteMesh.rotation.y = Math.PI / 2;
+        scene.add(noteMesh);
+
+        interactables.push({
+            mesh: noteMesh,
+            name: "note_records",
+            label: "فحص ورقة السجلات الطبية [E]",
+            action: () => {
+                isReadingNote = true;
+                document.exitPointerLock();
+                noteModal.style.display = 'block';
+            }
+        });
+
+        // 2. باب مستودع الأدوية
+        const medDoor = new THREE.Mesh(doorGeo, new THREE.MeshLambertMaterial({ color: 0x2e6f40 }));
+        medDoor.position.set(2.5, 1.6, 4);
+        scene.add(medDoor);
+
+        interactables.push({
+            mesh: medDoor,
+            name: "door_med",
+            label: "باب مستودع الأدوية [لوحة أرقام سرية]",
+            isOpen: false,
+            action: (obj) => {
+                if (obj.isOpen) {
+                    toggleDoor(obj);
+                } else {
+                    isUsingKeypad = true;
+                    document.exitPointerLock();
+                    enteredCode = "";
+                    updateKeypadDisplay();
+                    keypadModal.style.display = 'block';
+                }
+            }
+        });
+
+        // مفتاح المشرحة داخل مستودع الأدوية
+        const morgueKeyMesh = new THREE.Mesh(keyGeo, new THREE.MeshBasicMaterial({ color: 0x00ffff }));
+        morgueKeyMesh.position.set(15, 1.0, 0);
+        scene.add(morgueKeyMesh);
+
+        interactables.push({
+            mesh: morgueKeyMesh,
+            name: "key_morgue",
+            label: "التقاط مفتاح المشرحة الحديدي [E]",
+            action: (obj) => {
+                inventory.morgueKey = true;
+                scene.remove(obj.mesh);
+                removeInteractable(obj);
+                playPickupSound();
+                updateUI("بحوزتك: مفتاح المشرحة");
+                showMessage("أخذت مفتاح المشرحة الحديدي!");
+            }
+        });
+
+        // 3. باب المشرحة
+        const morgueDoor = new THREE.Mesh(doorGeo, new THREE.MeshLambertMaterial({ color: 0x733636 }));
+        morgueDoor.position.set(-9, 1.6, -11);
+        morgueDoor.rotation.y = Math.PI / 2;
+        scene.add(morgueDoor);
+
+        interactables.push({
+            mesh: morgueDoor,
+            name: "door_morgue",
+            label: "باب المشرحة [مغلق بمفتاح حديدي]",
+            isOpen: false,
+            action: (obj) => {
+                if (inventory.morgueKey) {
+                    toggleDoor(obj, "تم فتح المشرحة!");
+                } else {
+                    showMessage("الباب يتطلب مفتاح المشرحة من مستودع الأدوية!");
+                }
+            }
+        });
+
+        // قاطع الكهرباء في المشرحة
+        const breakerBox = new THREE.Mesh(new THREE.BoxGeometry(0.8, 1.2, 0.3), new THREE.MeshLambertMaterial({ color: 0xff2222 }));
+        breakerBox.position.set(-18, 1.8, -13);
+        scene.add(breakerBox);
+
+        interactables.push({
+            mesh: breakerBox,
+            name: "breaker",
+            label: "تشغيل قاطع كهرباء مخرج الطوارئ [E]",
+            action: (obj) => {
+                if (!inventory.powerRestored) {
+                    inventory.powerRestored = true;
+                    playPickupSound();
+                    obj.label = "القاطع الكهربائي [يعمل بنجاح]";
+                    showMessage("عادت الكهرباء لباب الطوارئ! اركض للمخرج في الجناح المقابل!");
+                } else {
+                    showMessage("قاطع الكهرباء يعمل بالفعل.");
+                }
+            }
+        });
+
+        // 4. باب الهروب النهائي (Emergency Exit)
+        const exitDoor = new THREE.Mesh(doorGeo, new THREE.MeshLambertMaterial({ color: 0x22aa44 }));
+        exitDoor.position.set(9, 1.6, -11);
+        exitDoor.rotation.y = Math.PI / 2;
+        scene.add(exitDoor);
+
+        interactables.push({
+            mesh: exitDoor,
+            name: "door_exit",
+            label: "بوابة مخرج الطوارئ للشارع",
+            action: () => {
+                if (inventory.powerRestored) {
+                    winGame();
+                } else {
+                    showMessage("البوابة الإلكترونية مقفلة.. شغل قاطع الكهرباء من المشرحة أولاً!");
+                }
+            }
+        });
+    }
+
+    function toggleDoor(obj, msg) {
+        playCreak();
+        obj.isOpen = !obj.isOpen;
+        if (obj.isOpen) {
+            obj.mesh.position.y += 3.5;
+            obj.label = "إغلاق الباب [E]";
+        } else {
+            obj.mesh.position.y -= 3.5;
+            obj.label = "فتح الباب [E]";
+        }
+        if (msg) showMessage(msg);
+    }
+
+    function removeInteractable(target) {
+        const idx = interactables.indexOf(target);
+        if (idx !== -1) interactables.splice(idx, 1);
+    }
+
+    function checkRaycastInteractions() {
+        if (!camera) return;
+
+        let closest = null;
+        let minDistance = 3.8;
+
+        for (let item of interactables) {
+            const dist = camera.position.distanceTo(item.mesh.position);
+            if (dist < minDistance) {
+                const camDir = new THREE.Vector3();
+                camera.getWorldDirection(camDir);
+                const toItem = item.mesh.position.clone().sub(camera.position).normalize();
+                const dot = camDir.dot(toItem);
+
+                if (dot > 0.6) {
+                    closest = item;
+                    minDistance = dist;
+                }
+            }
+        }
+
+        if (closest) {
+            activeInteractable = closest;
+            promptEl.style.display = 'block';
+            promptEl.innerText = closest.label;
+            crosshairEl.classList.add('active');
+        } else {
+            activeInteractable = null;
+            promptEl.style.display = 'none';
+            crosshairEl.classList.remove('active');
+        }
+    }
+
+    function handleInteraction() {
+        if (isReadingNote) {
+            isReadingNote = false;
+            noteModal.style.display = 'none';
+            document.body.requestPointerLock();
+            return;
+        }
+
+        if (isUsingKeypad) {
+            isUsingKeypad = false;
+            keypadModal.style.display = 'none';
+            document.body.requestPointerLock();
+            return;
+        }
+
+        if (activeInteractable && activeInteractable.action) {
+            activeInteractable.action(activeInteractable);
+        }
+    }
+
+    window.pressKey = function(val) {
+        if (val === 'C') {
+            enteredCode = "";
+        } else if (val === 'OK') {
+            if (enteredCode === "4829") {
+                const medDoorObj = interactables.find(i => i.name === "door_med");
+                if (medDoorObj) {
+                    toggleDoor(medDoorObj, "رمز صحيح! تم فتح مستودع الأدوية.");
+                }
+                isUsingKeypad = false;
+                keypadModal.style.display = 'none';
+                document.body.requestPointerLock();
+            } else {
+                showMessage("رمز خاطئ! تحقق من ورقة السجلات.");
+                enteredCode = "";
+            }
+        } else {
+            if (enteredCode.length < 4) enteredCode += val;
+        }
+        updateKeypadDisplay();
+    };
+
+    function updateKeypadDisplay() {
+        document.getElementById('keypad-display').innerText = enteredCode;
+    }
+
+    function scheduleNextJumpscare() {
+        const delay = (60 + Math.random() * 50) * 1000;
+        setTimeout(() => {
+            triggerJumpscare();
+            scheduleNextJumpscare();
+        }, delay);
+    }
+
+    function triggerJumpscare() {
+        if (isGameOver) return;
+
+        playScreamerSound();
+        scareOverlay.style.display = 'flex';
+
+        const originalY = camera.position.y;
+        camera.position.y += 0.3;
+        flashlight.intensity = 0;
+
+        setTimeout(() => {
+            camera.position.y = originalY;
+            scareOverlay.style.display = 'none';
+            setTimeout(() => { flashlight.intensity = 1.5; }, 300);
+            setTimeout(() => { flashlight.intensity = 0; }, 500);
+            setTimeout(() => { 
+                flashlight.intensity = flashlightOn ? 3.5 : 0; 
+            }, 800);
+        }, 1100);
+    }
+
+    function showMessage(txt) {
+        promptEl.style.display = 'block';
+        promptEl.innerText = txt;
+        setTimeout(() => {
+            if (!activeInteractable) promptEl.style.display = 'none';
+        }, 3200);
+    }
+
+    function updateUI(keyTxt) {
+        document.getElementById('inv-keys').innerText = keyTxt;
+        document.getElementById('inv-keys').style.color = "#00ff66";
+    }
+
+    function updateRoomIndicator() {
+        const z = camera.position.z;
+        const x = camera.position.x;
+        const roomEl = document.getElementById('room-state');
+
+        if (z > 4) {
+            roomEl.innerText = "بهو الاستقبال العام";
+        } else if (x < -2 && z > -6) {
+            roomEl.innerText = "غرفة السجلات الطبية";
+        } else if (x > 2 && z > -6) {
+            roomEl.innerText = "مستودع الأدوية";
+        } else if (x < -2 && z <= -6) {
+            roomEl.innerText = "مشرحة المستشفى";
+        } else {
+            roomEl.innerText = "ممر الطوارئ الخلفي";
+        }
+    }
+
+    function winGame() {
+        isGameOver = true;
+        document.exitPointerLock();
+        startBtn.style.display = 'block';
+        startBtn.innerHTML = `
+            <h2 style="color: #00ff66; margin-top:0;">نجوت يا فهد بحياتك!</h2>
+            <p>خرجت عبر بوابة الطوارئ إلى الشارع العام سالماً من أرواح المستشفى المهجور.</p>
+            <button onclick="location.reload()" style="padding:10px 24px; font-size:16px; cursor:pointer;">إعادة التجربة</button>
+        `;
+    }
+
+    function animate() {
+        requestAnimationFrame(animate);
+        if (isGameOver) return;
+
+        if (flashlight) {
+            flashlight.position.copy(camera.position);
+            const dir = new THREE.Vector3();
+            camera.getWorldDirection(dir);
+            flashlight.target.position.copy(camera.position).add(dir.multiplyScalar(6));
+        }
+
+        if (isLocked && !isReadingNote && !isUsingKeypad) {
+            const moveSpeed = 0.07;
+            const moveDir = new THREE.Vector3();
+
+            if (moveState.forward) moveDir.z -= 1;
+            if (moveState.backward) moveDir.z += 1;
+            if (moveState.left) moveDir.x -= 1;
+            if (moveState.right) moveDir.x += 1;
+
+            moveDir.normalize();
+            moveDir.applyEuler(new THREE.Euler(0, camera.rotation.y, 0));
+
+            camera.position.x += moveDir.x * moveSpeed;
+            camera.position.z += moveDir.z * moveSpeed;
+
+            camera.position.x = Math.max(-19.5, Math.min(19.5, camera.position.x));
+            camera.position.z = Math.max(-16.5, Math.min(16.5, camera.position.z));
+
+            updateRoomIndicator();
+            checkRaycastInteractions();
+        }
+
+        renderer.render(scene, camera);
+    }
+
+    init();
+</script>
+
+</body>
+</html>
